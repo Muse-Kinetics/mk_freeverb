@@ -46,8 +46,8 @@ namespace ReverbPresets {
     const ReverbPreset DEFAULT_PRESET(
         0.5f,   // roomsize
         0.5f,   // damp
-        0.3f,   // wet
-        0.7f,   // dry
+        1.0f,   // wet
+        0.0f,   // dry
         1.0f,   // width
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -62,8 +62,8 @@ namespace ReverbPresets {
     const ReverbPreset SMALL_ROOM(
         0.3f,   // roomsize
         0.7f,   // damp (more damping for smaller space)
-        0.25f,  // wet
-        0.75f,  // dry
+        1.0f,  // wet
+        0.0f,  // dry
         0.8f,   // width
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -78,8 +78,8 @@ namespace ReverbPresets {
     const ReverbPreset MEDIUM_HALL(
         0.6f,   // roomsize
         0.4f,   // damp
-        0.4f,   // wet
-        0.6f,   // dry
+        1.0f,   // wet
+        0.0f,   // dry
         1.0f,   // width
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -94,8 +94,8 @@ namespace ReverbPresets {
     const ReverbPreset LARGE_CATHEDRAL(
         0.85f,  // roomsize
         0.2f,   // damp (less damping for longer decay)
-        0.6f,   // wet
-        0.4f,   // dry
+        1.0f,   // wet
+        0.0f,   // dry
         1.0f,   // width
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -110,8 +110,8 @@ namespace ReverbPresets {
     const ReverbPreset PLATE_REVERB(
         0.7f,   // roomsize
         0.6f,   // damp
-        0.5f,   // wet
-        0.5f,   // dry
+        1.0f,   // wet
+        0.0f,   // dry
         0.9f,   // width (slightly narrower)
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -126,8 +126,8 @@ namespace ReverbPresets {
     const ReverbPreset SPRING_REVERB(
         0.4f,   // roomsize
         0.8f,   // damp (characteristic dampening)
-        0.4f,   // wet
-        0.6f,   // dry
+        1.0f,   // wet
+        0.0f,   // dry
         0.7f,   // width (narrower stereo field)
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -142,8 +142,8 @@ namespace ReverbPresets {
     const ReverbPreset AMBIENT_WASH(
         0.9f,   // roomsize
         0.1f,   // damp (very little damping)
-        0.7f,   // wet (mostly reverb)
-        0.3f,   // dry
+        1.0f,   // wet (mostly reverb)
+        0.0f,   // dry
         1.0f,   // width
         0.0f    // mode
 #if MK_FREEVERB_ENABLE_PREDELAY
@@ -158,8 +158,8 @@ namespace ReverbPresets {
     const ReverbPreset FREEZE_MODE(
         1.0f,   // roomsize
         0.0f,   // damp
-        0.8f,   // wet
-        0.2f,   // dry
+        1.0f,   // wet
+        0.0f,   // dry
         1.0f,   // width
         1.0f    // mode (freeze!)
 #if MK_FREEVERB_ENABLE_PREDELAY

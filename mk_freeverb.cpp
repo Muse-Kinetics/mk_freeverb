@@ -41,13 +41,6 @@ mk_freeverb::mk_freeverb()
     allpassL[3].setfeedback(0.5f);
     allpassR[3].setfeedback(0.5f);
 
-    setwet(0.3f);
-    setroomsize(0.5f);
-    setdry(0.7f);
-    setdamp(0.5f);
-    setwidth(1.0f);
-    setmode(0.0f);
-
     // Apply default preset for consistent initialization
     apply_preset(ReverbPresets::DEFAULT_PRESET);
 
@@ -203,8 +196,20 @@ void mk_freeverb::processreplace(float *inputL, float *inputR, float *outputL, f
             outR = allpassR[i].process(outR);
         }
 
-        *outputL = outL * wet1 + outR * wet2 + *inputL * dry;
-        *outputR = outR * wet1 + outL * wet2 + *inputR * dry;
+        // Optimize for common case: wet=1.0, dry=0.0 (no dry signal mixing)
+        if (dry == 0.0f) {
+            // Further optimize for wet=1.0, width=1.0 (full wet, full stereo)
+            if (wet == 1.0f && width == 1.0f) {
+                *outputL = outL;  // wet1=1.0, wet2=0.0
+                *outputR = outR;
+            } else {
+                *outputL = outL * wet1 + outR * wet2;
+                *outputR = outR * wet1 + outL * wet2;
+            }
+        } else {
+            *outputL = outL * wet1 + outR * wet2 + *inputL * dry;
+            *outputR = outR * wet1 + outL * wet2 + *inputR * dry;
+        }
 
         inputL += skip;
         inputR += skip;
