@@ -1,6 +1,7 @@
 #include "mk_freeverb.hpp"
 
-mk_freeverb::mk_freeverb()
+mk_freeverb::mk_freeverb(float sr)
+    : sampleRate(sr)
 {
     // Initialize comb filters (only the ones we're using)
     combL[0].setbuffer(bufcombL1, combtuningL1);
@@ -41,14 +42,28 @@ mk_freeverb::mk_freeverb()
     allpassL[3].setfeedback(0.5f);
     allpassR[3].setfeedback(0.5f);
 
-    // Apply default preset for consistent initialization
-    apply_preset(ReverbPresets::DEFAULT_PRESET);
+    
+    // Initialize basic parameters only (no preset application during construction)
+    // Preset will be applied later via initialize() or first processreplace() call
+    roomSize = 0.5f;
+    damp = 0.5f;
+    wet = 0.33f;
+    dry = 0.4f;
+    width = 1.0f;
+    mode = 0.0f;
+
+    // Mark that we need to apply default preset on first use
+    presetPending = true;
+    pendingPreset = ReverbPresets::DEFAULT_PRESET;
 
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
-    input_filter.reset(Filter::Type::Lowpass, sampleRate);
-    input_filter.setCutoff(8000.f);
-    input_filter.setResonance(0.5f);
+    input_filter = std::make_shared<Filter>(Filter::Type::Lowpass, sampleRate);
+    input_filter->setCutoff(8000.f);
+    input_filter->setResonance(0.5f);
 #endif
+
+
+    update(); // Safe to call - just updates coefficients, no filter operations
 
 #if MK_FREEVERB_ENABLE_PREDELAY
     // Initialize predelay buffers to zero
@@ -75,9 +90,15 @@ mk_freeverb::mk_freeverb()
     mute();
 }
 
+void mk_freeverb::initialize()
+{
+    // Safe to apply preset now that construction is complete
+    apply_preset(ReverbPresets::DEFAULT_PRESET);
+}
+
 void mk_freeverb::mute()
 {
-    if (getmode() >= freezemode) return;
+    if (getMode() >= freezemode) return;
 
     for (int i = 0; i < MK_FREEVERB_NUM_COMBS; i++)
     {
@@ -99,6 +120,20 @@ void mk_freeverb::processreplace(float *inputL, float *inputR, float *outputL, f
         presetPending = false;
     }
 
+#if MK_FREEVERB_ENABLE_INPUT_FILTER
+    // Initialize input filter on first use when sample rate is guaranteed to be valid
+    static bool filter_initialized = false;
+    if (!filter_initialized && sampleRate > 0.0f)
+    {
+        if (input_filter) {
+            input_filter->reset(Filter::Type::Lowpass, sampleRate);
+            input_filter->setCutoff(8000.f);
+            input_filter->setResonance(0.5f);
+        }
+        filter_initialized = true;
+    }
+#endif
+
     while (numsamples-- > 0)
     {
         float inL = *inputL;
@@ -106,8 +141,10 @@ void mk_freeverb::processreplace(float *inputL, float *inputR, float *outputL, f
 
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
         // Apply input filtering if enabled
-        inL = input_filter.process(inL);
-        inR = input_filter.process(inR);
+        if (input_filter) {
+            inL = input_filter->process(inL);
+            inR = input_filter->process(inR);
+        }
 #endif
 
         float predelayedL = inL;
@@ -218,27 +255,37 @@ void mk_freeverb::processreplace(float *inputL, float *inputR, float *outputL, f
     }
 }
 
-void mk_freeverb::setroomsize(float value) { roomsize = value; update(); }
-float mk_freeverb::getroomsize() { return roomsize; }
+void mk_freeverb::setRoomSize(float value) { roomSize = value; update(); }
+float mk_freeverb::getRoomSize() { return roomSize; }
 
-void mk_freeverb::setdamp(float value) { damp = value; update(); }
-float mk_freeverb::getdamp() { return damp; }
+void mk_freeverb::setDamp(float value) { damp = value; update(); }
+float mk_freeverb::getDamp() { return damp; }
 
-void mk_freeverb::setwet(float value) { wet = value; update(); }
-float mk_freeverb::getwet() { return wet; }
+void mk_freeverb::setWet(float value) { wet = value; update(); }
+float mk_freeverb::getWet() { return wet; }
 
-void mk_freeverb::setdry(float value) { dry = value; }
-float mk_freeverb::getdry() { return dry; }
+void mk_freeverb::setDry(float value) { dry = value; }
+float mk_freeverb::getDry() { return dry; }
 
-void mk_freeverb::setwidth(float value) { width = value; update(); }
-float mk_freeverb::getwidth() { return width; }
+void mk_freeverb::setWidth(float value) { width = value; update(); }
+float mk_freeverb::getWidth() { return width; }
 
-void mk_freeverb::setmode(float value) { mode = value; update(); }
-float mk_freeverb::getmode() { return mode; }
+void mk_freeverb::setMode(float value) { mode = value; update(); }
+float mk_freeverb::getMode() { return mode; }
 
-#if MK_FREEVERB_ENABLE_PREDELAY
-void mk_freeverb::set_predelay(float seconds)
+void mk_freeverb::setLPCutoff(float cutoff)
 {
+#if MK_FREEVERB_ENABLE_INPUT_FILTER
+    if (input_filter) {
+        input_filter->setCutoff(cutoff);
+    }
+#endif
+}
+
+
+void mk_freeverb::setPredelay(float seconds)
+{
+#if MK_FREEVERB_ENABLE_PREDELAY
     size_t newSize = static_cast<size_t>(sampleRate * seconds);
     
     // Clamp to maximum buffer size for RT safety
@@ -273,14 +320,26 @@ void mk_freeverb::set_predelay(float seconds)
         predelayBufferR[i] = 0.0f;
     }
 #endif
-}
 #endif
+}
+
+float mk_freeverb::getPredelay()
+{
+#if MK_FREEVERB_ENABLE_PREDELAY
+    return static_cast<float>(predelaySize) / sampleRate;
+#else
+    return 0.0f;    
+#endif
+}
 
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
 void mk_freeverb::set_input_filter(float cutoff, float resonance)
 {
-    input_filter.setCutoff(cutoff);
-    input_filter.setResonance(resonance);
+    // these two lines cause the hard fault
+    if (input_filter) {
+        input_filter->setCutoff(cutoff);
+        input_filter->setResonance(resonance);
+    }
 }
 #endif
 
@@ -291,21 +350,21 @@ void mk_freeverb::update()
 
     if (mode >= freezemode)
     {
-        roomsize1 = 1;
+        roomSize1 = 1;
         damp1 = 0;
         gain = muted;
     }
     else
     {
-        roomsize1 = roomsize;
+        roomSize1 = roomSize;
         damp1 = damp;
         gain = fixedgain;
     }
 
     for (int i = 0; i < MK_FREEVERB_NUM_COMBS; i++)
     {
-        combL[i].setfeedback(roomsize1);
-        combR[i].setfeedback(roomsize1);
+        combL[i].setfeedback(roomSize1);
+        combR[i].setfeedback(roomSize1);
         combL[i].setdamp(damp1);
         combR[i].setdamp(damp1);
     }
@@ -357,16 +416,17 @@ void mk_freeverb::load_preset_by_index(int index)
 
 void mk_freeverb::apply_preset_internal(const ReverbPreset& preset)
 {
-    setroomsize(preset.roomsize);
-    setdamp(preset.damp);
-    setwet(preset.wet);
-    setdry(preset.dry);
-    setwidth(preset.width);
-    setmode(preset.mode);
+    setRoomSize(preset.roomSize);
+    setDamp(preset.damp);
+    setWet(preset.wet);
+    setDry(preset.dry);
+    setWidth(preset.width);
+    setMode(preset.mode);
 #if MK_FREEVERB_ENABLE_PREDELAY
     set_predelay(preset.predelay);
 #endif
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
+    
     set_input_filter(preset.cutoff, preset.resonance);
 #endif
 }

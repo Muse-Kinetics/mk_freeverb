@@ -15,8 +15,13 @@ public:
         Highpass
     };
 
-    Filter() : type_(NONE), sample_rate_(48000.0f) {
-        reset(NONE, 48000.0f);
+    Filter(Type type = NONE, float sample_rate = 48000.0f) : type_(type), sample_rate_(sample_rate) {
+        x1_ = x2_ = y1_ = y2_ = 0.0f;
+        first_ = true;
+        last_cutoff_ = 0.0f;
+        last_resonance_ = 0.0f;
+        b0_ = 1.0f; b1_ = b2_ = a1_ = a2_ = 0.0f;
+        reset(type, sample_rate);
     }
 
     void reset(Type type, float sample_rate) {
@@ -25,9 +30,14 @@ public:
         // Reset filter state
         x1_ = x2_ = y1_ = y2_ = 0.0f;
         first_ = true;
+        enabled_ = (type != NONE && sample_rate > 0.0f);
         last_cutoff_ = 0.0f;
         last_resonance_ = 0.0f;
         update_coefficients();
+    }
+
+    Type getType() const {
+        return type_;
     }
 
     void setCutoff(float freq) {
@@ -41,8 +51,13 @@ public:
     }
 
     float process(float input) {
-        if (type_ == NONE) {
+        if (!enabled_) {
             return input;
+        }
+
+        // Ensure coefficients are calculated 
+        if (first_) {
+            update_coefficients();
         }
 
         float output = b0_ * input + b1_ * x1_ + b2_ * x2_ - a1_ * y1_ - a2_ * y2_;
@@ -63,6 +78,9 @@ private:
     }
 
     void update_coefficients() {
+        if (enabled_ == false)
+            return;
+            
         if (type_ == NONE || cutoff_ <= 0.0f) {
             b0_ = 1.0f; b1_ = b2_ = a1_ = a2_ = 0.0f;
             return;
@@ -117,14 +135,15 @@ private:
         }
     }
 
-    Type type_;
-    float sample_rate_;
+    bool enabled_ = false;
+    Type type_ = NONE;
+    float sample_rate_ = 0.0f;
     float cutoff_ = 1000.0f;
     float resonance_ = 0.0f;  // In dB (same as liquidsfz)
 
     // Parameter smoothing state (same as liquidsfz)
     bool first_ = true;
-    float last_cutoff_ = 0.0f;
+    float last_cutoff_ = 10.0f;
     float last_resonance_ = 0.0f;
 
     // Biquad coefficients

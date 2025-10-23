@@ -1,10 +1,12 @@
 #ifndef _mk_freeverb_presets_
 #define _mk_freeverb_presets_
 
+#include "mk_freeverb_config.h"
+
 // Reverb preset structure
 struct ReverbPreset {
     // Core parameters (always available)
-    float roomsize;
+    float roomSize;
     float damp;
     float wet;
     float dry;
@@ -29,7 +31,7 @@ struct ReverbPreset {
                 , float cf = 8000.0f, float res = 0.5f
 #endif
                 )
-        : roomsize(r), damp(d), wet(w), dry(dr), width(wi), mode(m)
+        : roomSize(r), damp(d), wet(w), dry(dr), width(wi), mode(m)
 #if MK_FREEVERB_ENABLE_PREDELAY
         , predelay(pd)
 #endif
@@ -44,17 +46,17 @@ namespace ReverbPresets {
     
     // Default/initialization preset
     const ReverbPreset DEFAULT_PRESET(
-        0.5f,   // roomsize
-        0.5f,   // damp
+        0.825984252f,   // roomsize
+        0.3228346457f,   // damp
         1.0f,   // wet
         0.0f,   // dry
         1.0f,   // width
-        0.0f    // mode
+        0.0f    // mode (freeze)
 #if MK_FREEVERB_ENABLE_PREDELAY
         , 0.0f  // predelay (no predelay by default)
 #endif
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
-        , 8000.0f, 0.5f  // cutoff, resonance
+        , 2000.0f, 0.0f  // cutoff, resonance
 #endif
     );
 

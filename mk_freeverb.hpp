@@ -5,64 +5,57 @@
 #include "allpass.hpp"
 #include "filter.hpp"
 #include "tuning.h"
+#include "mk_freeverb_config.h"
 #include "mk_freeverb_presets.h"
-
-// Real-time safety configuration
-#ifndef MK_FREEVERB_ENABLE_PREDELAY
-#define MK_FREEVERB_ENABLE_PREDELAY 0  // Disable predelay for RT safety
-#endif
-
-#ifndef MK_FREEVERB_ENABLE_INPUT_FILTER
-#define MK_FREEVERB_ENABLE_INPUT_FILTER 0  // Disable input filtering for RT safety
-#endif
-
-#ifndef MK_FREEVERB_ENABLE_PREDELAY_CROSSFADE
-#define MK_FREEVERB_ENABLE_PREDELAY_CROSSFADE 0  // Disable crossfading for RT safety
-#endif
-
-#ifndef MK_FREEVERB_NUM_COMBS
-#define MK_FREEVERB_NUM_COMBS 4  // Reduce from 8 to 4 for better performance
-#endif
-
-// Predelay buffer size in samples (max ~100ms at 48kHz)
-#define MK_FREEVERB_MAX_PREDELAY_SAMPLES 4800
+#include <memory>
 
 class mk_freeverb
 {
 public:
-    mk_freeverb();
+    mk_freeverb(float sr = 48000.0f);
+    
+    // Initialize with default preset - call this after construction to avoid static init issues
+    void initialize();
 
     void mute();
 
     void processreplace(float *inputL, float *inputR, float *outputL, float *outputR, long numsamples, int skip);
 
-    void setroomsize(float value);
-    float getroomsize();
+    void setRoomSize(float value);
+    float getRoomSize();
 
-    void setdamp(float value);
-    float getdamp();
+    void setDamp(float value);
+    float getDamp();
 
-    void setwet(float value);
-    float getwet();
+    void setWet(float value);
+    float getWet();
 
-    void setdry(float value);
-    float getdry();
+    void setDry(float value);
+    float getDry();
 
-    void setwidth(float value);
-    float getwidth();
+    void setWidth(float value);
+    float getWidth();
 
-    void setmode(float value);
-    float getmode();
+    void setMode(float value);
+    float getMode();
 
-#if MK_FREEVERB_ENABLE_PREDELAY
-    void set_predelay(float seconds);
-#endif
+    void setLPCutoff(float cutoff);
+
+    void setPredelay(float seconds);
+    float getPredelay();
 
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
     void set_input_filter(float cutoff, float resonance);
 #endif
 
-    void set_sample_rate(float sr) { sampleRate = sr; }
+    void set_sample_rate(float sr) 
+    { 
+        sampleRate = sr; 
+#if MK_FREEVERB_ENABLE_INPUT_FILTER
+        Filter::Type filter_type = input_filter->getType();
+        input_filter->reset(filter_type, sr);
+#endif
+    }
 
     // Enhanced preset system
     void apply_preset(const ReverbPreset& preset);
@@ -88,7 +81,7 @@ private:
     void apply_preset_internal(const ReverbPreset& preset);
 
     float gain;
-    float roomsize, roomsize1;
+    float roomSize, roomSize1;
     float damp, damp1;
     float wet, wet1, wet2;
     float dry;
@@ -135,7 +128,7 @@ private:
 
 #if MK_FREEVERB_ENABLE_INPUT_FILTER
     // Input filter (optional for RT safety)
-    Filter input_filter;
+    std::shared_ptr<Filter> input_filter = nullptr;
 #endif
 
 #if MK_FREEVERB_ENABLE_PREDELAY

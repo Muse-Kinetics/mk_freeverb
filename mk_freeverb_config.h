@@ -24,7 +24,7 @@
 // Input filtering adds CPU load per sample
 // For real-time applications, consider disabling (0) 
 #ifndef MK_FREEVERB_ENABLE_INPUT_FILTER
-#define MK_FREEVERB_ENABLE_INPUT_FILTER 0
+#define MK_FREEVERB_ENABLE_INPUT_FILTER 1
 #endif
 
 // Number of comb filters to use (1-8)
